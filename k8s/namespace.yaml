@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: verisphere
+  labels:
+    name: verisphere
+    app: verisphere-misinformation-detection

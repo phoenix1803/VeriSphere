@@ -1,0 +1,292 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verisphere-api
+  namespace: verisphere
+  labels:
+    app: verisphere-api
+    component: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: verisphere-api
+  template:
+    metadata:
+      labels:
+        app: verisphere-api
+        component: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: verisphere-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: verisphere-api
+        image: verisphere/api:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+          protocol: TCP
+        env:
+        # Load configuration from ConfigMap
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: verisphere-config
+              key: ENVIRONMENT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: verisphere-config
+              key: LOG_LEVEL
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: verisphere-config
+              key: DEBUG
+        - name: API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: verisphere-config
+              key: API_HOST
+        - name: API_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: verisphere-config
+              key: API_PORT
+        - name: MAX_CONCURRENT_CLAIMS
+          valueFrom:
+            configMapKeyRef:
+              name: verisphere-config
+              key: MAX_CONCURRENT_CLAIMS
+        
+        # Load secrets
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: verisphere-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: verisphere-secrets
+              key: REDIS_URL
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verisphere-secrets
+              key: JWT_SECRET_KEY
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verisphere-secrets
+              key: SECRET_KEY
+        - name: HUGGINGFACE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verisphere-secrets
+              key: HUGGINGFACE_API_KEY
+        - name: SERPER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verisphere-secrets
+              key: SERPER_API_KEY
+        - name: GOOGLE_VISION_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verisphere-secrets
+              key: GOOGLE_VISION_API_KEY
+        
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        # Resource limits
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        
+        # Volume mounts
+        volumeMounts:
+        - name: logs
+          mountPath: /app/out/logs
+        - name: tmp
+          mountPath: /tmp
+        
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      
+      # Volumes
+      volumes:
+      - name: logs
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+      
+      # Node selection
+      nodeSelector:
+        kubernetes.io/os: linux
+      
+      # Tolerations for node taints
+      tolerations:
+      - key: "verisphere.io/dedicated"
+        operator: "Equal"
+        value: "api"
+        effect: "NoSchedule"
+      
+      # Pod anti-affinity for high availability
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - verisphere-api
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verisphere-worker
+  namespace: verisphere
+  labels:
+    app: verisphere-worker
+    component: worker
+spec:
+  replicas: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 2
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: verisphere-worker
+  template:
+    metadata:
+      labels:
+        app: verisphere-worker
+        component: worker
+    spec:
+      serviceAccountName: verisphere-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: verisphere-worker
+        image: verisphere/worker:latest
+        imagePullPolicy: Always
+        command: ["python", "-m", "defame.worker.main"]
+        env:
+        # Configuration from ConfigMap and Secrets (same as API)
+        - name: ENVIRONMENT
+          valueFrom:
+            configMapKeyRef:
+              name: verisphere-config
+              key: ENVIRONMENT
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: verisphere-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: verisphere-secrets
+              key: REDIS_URL
+        - name: HUGGINGFACE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verisphere-secrets
+              key: HUGGINGFACE_API_KEY
+        
+        # Health check
+        livenessProbe:
+          exec:
+            command:
+            - python
+            - -c
+            - "import sys; sys.exit(0)"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        
+        # Resource limits
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        
+        # Volume mounts
+        volumeMounts:
+        - name: logs
+          mountPath: /app/out/logs
+        - name: tmp
+          mountPath: /tmp
+        
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+      
+      volumes:
+      - name: logs
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+      
+      nodeSelector:
+        kubernetes.io/os: linux
+      
+      tolerations:
+      - key: "verisphere.io/dedicated"
+        operator: "Equal"
+        value: "worker"
+        effect: "NoSchedule"

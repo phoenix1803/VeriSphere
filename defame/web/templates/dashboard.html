@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VeriSphere Dashboard - Misinformation Detection System</title>
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo">
+            🛡️ VeriSphere
+        </div>
+        <div class="user-info">
+            <span>Welcome, {{ user.full_name or user.username }}</span>
+            <a href="/logout" class="btn btn-secondary">Logout</a>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs">
+        <ul>
+            <li class="active" data-tab="dashboard">Dashboard</li>
+            <li data-tab="submit-claim">Submit Claim</li>
+            <li data-tab="claims">Claims</li>
+            <li data-tab="system">System</li>
+        </ul>
+    </nav>
+
+    <!-- Alerts Container -->
+    <div id="alerts"></div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <div class="card-header">
+                <h2 class="card-title">System Overview</h2>
+                <div>
+                    <label>
+                        <input type="checkbox" id="auto-refresh" checked> Auto-refresh
+                    </label>
+                    <button class="btn btn-secondary refresh-btn">🔄 Refresh</button>
+                </div>
+            </div>
+
+            <!-- System Stats -->
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="stat-value" id="total-agents">0</div>
+                    <div class="stat-label">Total Agents</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value" id="healthy-agents">0</div>
+                    <div class="stat-label">Healthy Agents</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value" id="active-claims">0</div>
+                    <div class="stat-label">Active Claims</div>
+                </div>
+                <div class="stat-card primary">
+                    <div class="stat-value" id="total-processed">0</div>
+                    <div class="stat-label">Total Processed</div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <!-- Agent Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Agent Status</h3>
+                    </div>
+                    <div id="agents-list">
+                        <div class="spinner"></div> Loading agents...
+                    </div>
+                </div>
+
+                <!-- Recent Claims -->
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Recent Claims</h3>
+                    </div>
+                    <div id="recent-claims">
+                        <div class="spinner"></div> Loading claims...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Claim Tab -->
+        <div id="submit-claim" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Submit New Claim</h2>
+                </div>
+
+                <form id="claim-form">
+                    <div class="form-group">
+                        <label class="form-label" for="content">Claim Content *</label>
+                        <textarea id="content" name="content" class="form-textarea"
+                            placeholder="Enter the claim you want to verify..." required></textarea>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label" for="claim_type">Claim Type</label>
+                            <select id="claim_type" name="claim_type" class="form-select">
+                                <option value="text">Text</option>
+                                <option value="image">Image</option>
+                                <option value="multimodal">Multimodal</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="priority">Priority</label>
+                            <select id="priority" name="priority" class="form-select">
+                                <option value="normal">Normal</option>
+                                <option value="low">Low</option>
+                                <option value="high">High</option>
+                                <option value="critical">Critical</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="source">Source (Optional)</label>
+                            <input type="text" id="source" name="source" class="form-input"
+                                placeholder="e.g., Twitter, News Article">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        🚀 Submit Claim
+                    </button>
+                </form>
+            </div>
+
+            <!-- Submission Guidelines -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Submission Guidelines</h3>
+                </div>
+                <ul style="padding-left: 1.5rem;">
+                    <li>Provide clear, specific claims for better verification results</li>
+                    <li>Include source information when available</li>
+                    <li>Use appropriate priority levels (Critical for urgent misinformation)</li>
+                    <li>Text claims should be factual statements, not opinions</li>
+                    <li>Image claims require clear, unedited images</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Claims Tab -->
+        <div id="claims" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Active Claims</h2>
+                    <button class="btn btn-secondary refresh-btn">🔄 Refresh</button>
+                </div>
+
+                <table class="table" id="claims-table">
+                    <thead>
+                        <tr>
+                            <th>Claim ID</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Processing Time</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="spinner"></div> Loading claims...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- System Tab -->
+        <div id="system" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">System Metrics</h2>
+                    <button class="btn btn-secondary refresh-btn">🔄 Refresh</button>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="system-uptime">0h</div>
+                        <div class="stat-label">System Uptime</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="avg-processing-time">0s</div>
+                        <div class="stat-label">Avg Processing Time</div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-value" id="accuracy-score">0%</div>
+                        <div class="stat-label">Accuracy Score</div>
+                    </div>
+                    <div class="stat-card error">
+                        <div class="stat-value" id="error-rate">0%</div>
+                        <div class="stat-label">Error Rate</div>
+                    </div>
+                </div>
+
+                <!-- System Health -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Database Status</h3>
+                        </div>
+                        <div id="database-status">
+                            <div class="spinner"></div> Checking database...
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">External Services</h3>
+                        </div>
+                        <div id="external-services">
+                            <div class="spinner"></div> Checking services...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/dashboard.js"></script>
+</body>
+
+</html>

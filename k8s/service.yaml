@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: verisphere-api-service
+  namespace: verisphere
+  labels:
+    app: verisphere-api
+    component: backend
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "http"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-path: "/health"
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 8000
+    protocol: TCP
+    name: https
+  selector:
+    app: verisphere-api
+  sessionAffinity: None
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verisphere-api-internal
+  namespace: verisphere
+  labels:
+    app: verisphere-api
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: verisphere-api
+
+---
+# Headless service for StatefulSet components (if needed)
+apiVersion: v1
+kind: Service
+metadata:
+  name: verisphere-worker-headless
+  namespace: verisphere
+  labels:
+    app: verisphere-worker
+    component: worker
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: metrics
+  selector:
+    app: verisphere-worker

@@ -1,0 +1,180 @@
+# Verite Configuration for VeriSphere
+# Advanced verification and evidence assessment configuration
+
+# Evidence Scoring Weights
+evidence_weights:
+  primary_sources: 0.4      # Original sources, official documents
+  secondary_sources: 0.3    # News articles, academic papers
+  social_media: 0.1         # Social media posts, user content
+  expert_opinions: 0.2      # Expert statements, professional analysis
+
+# Source Credibility Scoring
+credibility_factors:
+  domain_authority:
+    weight: 0.25
+    high_authority_domains:
+      - "reuters.com"
+      - "ap.org"
+      - "bbc.com"
+      - "nature.com"
+      - "science.org"
+    medium_authority_domains:
+      - "cnn.com"
+      - "nytimes.com"
+      - "washingtonpost.com"
+    low_authority_domains:
+      - "blog.*"
+      - "*.wordpress.com"
+      - "*.blogspot.com"
+
+  publication_date:
+    weight: 0.15
+    recency_bonus_days: 30    # Bonus for recent publications
+    staleness_penalty_days: 365  # Penalty for very old content
+
+  author_expertise:
+    weight: 0.20
+    expert_indicators:
+      - "PhD"
+      - "Professor"
+      - "Dr."
+      - "Research"
+      - "Institute"
+
+  fact_check_status:
+    weight: 0.25
+    verified_indicators:
+      - "fact-checked"
+      - "verified"
+      - "confirmed"
+    disputed_indicators:
+      - "disputed"
+      - "false"
+      - "misleading"
+
+  cross_references:
+    weight: 0.15
+    min_supporting_sources: 2
+    max_contradicting_sources: 1
+
+# Claim Classification Thresholds
+classification_thresholds:
+  high_confidence: 0.85
+  medium_confidence: 0.65
+  low_confidence: 0.45
+  inconclusive: 0.30
+
+# Temporal Analysis Configuration
+temporal_analysis:
+  event_window_hours: 72     # Time window for event-related claims
+  trend_analysis_days: 7     # Days to analyze for trending topics
+  historical_context_years: 5  # Years of historical context to consider
+
+# Multimodal Analysis Settings
+multimodal_config:
+  image_analysis:
+    reverse_search_threshold: 0.8
+    metadata_weight: 0.3
+    visual_similarity_weight: 0.7
+    manipulation_detection_threshold: 0.6
+
+  text_image_consistency:
+    ocr_confidence_threshold: 0.8
+    semantic_similarity_threshold: 0.7
+    context_relevance_weight: 0.6
+
+# Geographic Verification
+geographic_verification:
+  coordinate_precision_meters: 100
+  landmark_recognition_confidence: 0.8
+  satellite_imagery_recency_days: 365
+  timezone_consistency_check: true
+
+# Language and Cultural Context
+language_config:
+  supported_languages:
+    - "en"  # English
+    - "es"  # Spanish
+    - "fr"  # French
+    - "de"  # German
+    - "zh"  # Chinese
+    - "ar"  # Arabic
+    - "hi"  # Hindi
+    - "pt"  # Portuguese
+
+  cultural_context_factors:
+    regional_news_sources: true
+    local_fact_checkers: true
+    cultural_sensitivity_check: true
+
+# Crisis Detection Parameters
+crisis_detection:
+  viral_threshold:
+    shares_per_hour: 1000
+    engagement_rate: 0.15
+    reach_multiplier: 10
+
+  severity_indicators:
+    public_safety_keywords:
+      - "emergency"
+      - "evacuation"
+      - "outbreak"
+      - "attack"
+      - "disaster"
+    
+    health_misinformation_keywords:
+      - "vaccine"
+      - "cure"
+      - "treatment"
+      - "medicine"
+      - "health"
+
+    political_misinformation_keywords:
+      - "election"
+      - "voting"
+      - "fraud"
+      - "rigged"
+      - "conspiracy"
+
+# Agent Coordination Rules
+agent_coordination:
+  consensus_requirements:
+    minimum_agents: 2
+    agreement_threshold: 0.7
+    conflict_resolution: "weighted_average"
+
+  agent_specialization:
+    text_claims:
+      primary: ["ml_agent", "wikipedia_agent"]
+      secondary: ["coherence_agent"]
+    
+    image_claims:
+      primary: ["ml_agent", "webscrape_agent"]
+      secondary: ["wikipedia_agent"]
+    
+    multimodal_claims:
+      primary: ["ml_agent", "wikipedia_agent", "webscrape_agent"]
+      secondary: ["coherence_agent"]
+
+# Quality Assurance
+quality_assurance:
+  minimum_evidence_sources: 3
+  maximum_processing_time_minutes: 10
+  confidence_calibration: true
+  human_review_threshold: 0.5  # Claims below this confidence need human review
+
+# Reporting Configuration
+reporting:
+  include_uncertainty_bounds: true
+  show_evidence_hierarchy: true
+  provide_alternative_interpretations: true
+  include_source_reliability_scores: true
+  generate_visual_evidence_map: true
+
+# Audit and Compliance
+audit_config:
+  log_all_decisions: true
+  retain_evidence_days: 365
+  blockchain_verification: true
+  gdpr_compliance: true
+  data_anonymization: true

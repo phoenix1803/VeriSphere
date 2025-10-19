@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verisphere-config
+  namespace: verisphere
+data:
+  # Application Configuration
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  DEBUG: "false"
+  
+  # API Configuration
+  API_HOST: "0.0.0.0"
+  API_PORT: "8000"
+  API_WORKERS: "4"
+  
+  # Processing Configuration
+  MAX_CONCURRENT_CLAIMS: "100"
+  CLAIM_TIMEOUT_SECONDS: "300"
+  AGENT_TIMEOUT_SECONDS: "60"
+  
+  # Rate Limiting
+  RATE_LIMIT_PER_MINUTE: "1000"
+  RATE_LIMIT_BURST: "50"
+  
+  # Cache Configuration
+  CACHE_TTL_SECONDS: "3600"
+  SEARCH_CACHE_TTL_SECONDS: "1800"
+  
+  # File Upload
+  UPLOAD_MAX_SIZE: "10485760"
+  ALLOWED_IMAGE_TYPES: "jpg,jpeg,png,webp,gif"
+  
+  # JWT Configuration
+  JWT_ALGORITHM: "HS256"
+  JWT_EXPIRE_MINUTES: "1440"
+  
+  # Agent Configuration
+  ML_AGENT_ENABLED: "true"
+  ML_AGENT_CONFIDENCE_THRESHOLD: "0.7"
+  ML_AGENT_MAX_SEQUENCE_LENGTH: "512"
+  
+  WIKIPEDIA_AGENT_ENABLED: "true"
+  WIKIPEDIA_AGENT_MAX_SEARCH_RESULTS: "10"
+  WIKIPEDIA_AGENT_SIMILARITY_THRESHOLD: "0.8"
+  
+  COHERENCE_AGENT_ENABLED: "true"
+  COHERENCE_AGENT_CONSISTENCY_THRESHOLD: "0.6"
+  COHERENCE_AGENT_TEMPORAL_WINDOW_HOURS: "24"
+  
+  WEBSCRAPE_AGENT_ENABLED: "true"
+  WEBSCRAPE_AGENT_MAX_PAGES_PER_CLAIM: "5"
+  WEBSCRAPE_AGENT_TIMEOUT_SECONDS: "30"
+  
+  # Pipeline Configuration
+  PIPELINE_MAX_EVIDENCE_SOURCES: "20"
+  PIPELINE_MIN_CONFIDENCE_THRESHOLD: "0.5"
+  PIPELINE_CONSENSUS_WEIGHT_THRESHOLD: "0.6"
+  PIPELINE_STAGE_TIMEOUT_SECONDS: "120"
+  
+  # Batch Processing
+  BATCH_MAX_CONCURRENT_JOBS: "5"
+  BATCH_MAX_CONCURRENT_CLAIMS: "20"
+  BATCH_JOB_TIMEOUT_HOURS: "24"
+  
+  # External Services
+  FIRECRAWL_URL: "http://firecrawl-service:3002"
+  
+  # Monitoring
+  METRICS_ENABLED: "true"
+  HEALTH_CHECK_INTERVAL: "60"

@@ -1,0 +1,287 @@
+# ServiceMonitor for Prometheus scraping
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: verisphere-api-metrics
+  namespace: verisphere
+  labels:
+    app: verisphere-api
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: verisphere-api
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+    honorLabels: true
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: verisphere-worker-metrics
+  namespace: verisphere
+  labels:
+    app: verisphere-worker
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: verisphere-worker
+  endpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+# PrometheusRule for alerting
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: verisphere-alerts
+  namespace: verisphere
+  labels:
+    app: verisphere
+    prometheus: kube-prometheus
+spec:
+  groups:
+  - name: verisphere.api
+    rules:
+    # High error rate
+    - alert: VeriSphereHighErrorRate
+      expr: |
+        (
+          rate(verisphere_http_requests_total{status=~"5.."}[5m]) /
+          rate(verisphere_http_requests_total[5m])
+        ) > 0.05
+      for: 2m
+      labels:
+        severity: warning
+        component: api
+      annotations:
+        summary: "High error rate detected"
+        description: "VeriSphere API error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+    
+    # High response time
+    - alert: VeriSphereHighResponseTime
+      expr: |
+        histogram_quantile(0.95, rate(verisphere_http_request_duration_seconds_bucket[5m])) > 5
+      for: 5m
+      labels:
+        severity: warning
+        component: api
+      annotations:
+        summary: "High response time detected"
+        description: "95th percentile response time is {{ $value }}s"
+    
+    # Pod crash looping
+    - alert: VeriSpherePodCrashLooping
+      expr: |
+        rate(kube_pod_container_status_restarts_total{namespace="verisphere"}[15m]) > 0
+      for: 5m
+      labels:
+        severity: critical
+        component: infrastructure
+      annotations:
+        summary: "Pod is crash looping"
+        description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} is crash looping"
+    
+    # High memory usage
+    - alert: VeriSphereHighMemoryUsage
+      expr: |
+        (
+          container_memory_working_set_bytes{namespace="verisphere", container!="POD", container!=""} /
+          container_spec_memory_limit_bytes{namespace="verisphere", container!="POD", container!=""} * 100
+        ) > 90
+      for: 5m
+      labels:
+        severity: warning
+        component: infrastructure
+      annotations:
+        summary: "High memory usage"
+        description: "Container {{ $labels.container }} in pod {{ $labels.pod }} is using {{ $value }}% of memory"
+    
+    # Queue depth too high
+    - alert: VeriSphereHighQueueDepth
+      expr: |
+        verisphere_queue_depth > 1000
+      for: 10m
+      labels:
+        severity: warning
+        component: processing
+      annotations:
+        summary: "Processing queue depth is high"
+        description: "Queue depth is {{ $value }}, processing may be falling behind"
+    
+    # Low agent health
+    - alert: VeriSphereUnhealthyAgents
+      expr: |
+        verisphere_healthy_agents / verisphere_total_agents < 0.8
+      for: 5m
+      labels:
+        severity: critical
+        component: agents
+      annotations:
+        summary: "Multiple agents are unhealthy"
+        description: "Only {{ $value | humanizePercentage }} of agents are healthy"
+    
+    # Database connection issues
+    - alert: VeriSphereDatabaseConnectionFailure
+      expr: |
+        verisphere_database_connections_failed_total > 0
+      for: 1m
+      labels:
+        severity: critical
+        component: database
+      annotations:
+        summary: "Database connection failures detected"
+        description: "{{ $value }} database connection failures in the last minute"
+
+  - name: verisphere.business
+    rules:
+    # Low accuracy score
+    - alert: VeriSphereLowAccuracy
+      expr: |
+        verisphere_accuracy_score < 0.8
+      for: 30m
+      labels:
+        severity: warning
+        component: ml
+      annotations:
+        summary: "System accuracy is low"
+        description: "Overall system accuracy is {{ $value | humanizePercentage }}"
+    
+    # Processing time too high
+    - alert: VeriSphereSlowProcessing
+      expr: |
+        verisphere_average_processing_time_seconds > 120
+      for: 15m
+      labels:
+        severity: warning
+        component: processing
+      annotations:
+        summary: "Claims are processing slowly"
+        description: "Average processing time is {{ $value }}s"
+    
+    # No claims processed recently
+    - alert: VeriSphereNoRecentClaims
+      expr: |
+        increase(verisphere_claims_processed_total[1h]) == 0
+      for: 2h
+      labels:
+        severity: warning
+        component: processing
+      annotations:
+        summary: "No claims processed recently"
+        description: "No claims have been processed in the last hour"
+
+---
+# Grafana Dashboard ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verisphere-dashboard
+  namespace: verisphere
+  labels:
+    grafana_dashboard: "1"
+data:
+  verisphere-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "VeriSphere Overview",
+        "tags": ["verisphere", "misinformation"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Claims Processed",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(verisphere_claims_processed_total[5m])",
+                "legendFormat": "Claims/sec"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "System Accuracy",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "verisphere_accuracy_score",
+                "legendFormat": "Accuracy"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "Active Agents",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "verisphere_healthy_agents",
+                "legendFormat": "Healthy Agents"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+          },
+          {
+            "id": 4,
+            "title": "Queue Depth",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "verisphere_queue_depth",
+                "legendFormat": "Queue Depth"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+          },
+          {
+            "id": 5,
+            "title": "Response Time",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.50, rate(verisphere_http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "50th percentile"
+              },
+              {
+                "expr": "histogram_quantile(0.95, rate(verisphere_http_request_duration_seconds_bucket[5m]))",
+                "legendFormat": "95th percentile"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 6,
+            "title": "Error Rate",
+            "type": "graph",
+            "targets": [
+              {
+                "expr": "rate(verisphere_http_requests_total{status=~\"5..\"}[5m])",
+                "legendFormat": "5xx errors"
+              },
+              {
+                "expr": "rate(verisphere_http_requests_total{status=~\"4..\"}[5m])",
+                "legendFormat": "4xx errors"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
